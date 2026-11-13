@@ -49,7 +49,6 @@
     </div>
 
     <div class="lobby-middle">
-      <!-- Left Menu Buttons (Vault / Outfits & Profile) -->
       <div class="lobby-menu-left">
         <button class="menu-tile" onclick="openVaultModal()">
           <span class="tile-icon">👕</span>
@@ -68,11 +67,10 @@
         </button>
       </div>
 
-      <!-- Right Start Match Button -->
       <div class="lobby-right-start">
         <div class="mode-box">
           <span>MAP: BHARAT VALLEY (HD)</span>
-          <small>Squad / Solo • Ultra Graphics</small>
+          <small>Real 3D Character • Ultra Graphics</small>
         </div>
         <button class="play-btn" onclick="startMatch()">START MATCH</button>
       </div>
@@ -81,7 +79,7 @@
 
   <!-- IN-GAME HUD -->
   <div id="hud">
-    <!-- Realistic Optical Scope Overlay -->
+    <!-- Optical Scope Overlay -->
     <div id="scope-overlay">
       <div class="scope-ring">
         <div class="scope-line-h"></div>
@@ -92,12 +90,10 @@
     </div>
 
     <div class="hud-top">
-      <!-- Mini-Map Radar -->
       <div class="minimap-box">
         <canvas id="minimap" width="104" height="104"></canvas>
       </div>
 
-      <!-- Match Stats & Kill Banner -->
       <div class="top-center-wrap">
         <div class="top-center-stats">
           <div class="stat-pill" id="alive-box">ALIVE: 13 | KILLS: 0</div>
@@ -106,28 +102,23 @@
         <div id="kill-banner">💀 HEADSHOT KILL!</div>
       </div>
 
-      <!-- Top Right Controls -->
       <div class="top-right-btns">
         <button class="hud-mini-btn" onclick="openSettings()">⚙️</button>
         <button class="hud-mini-btn exit-btn" onclick="exitToLobby()">EXIT</button>
       </div>
     </div>
 
-    <!-- Center Crosshair, Hitmarker & Damage -->
     <div id="crosshair"></div>
     <div id="hitmarker">✕</div>
     <div id="dmg-popup">-155</div>
 
-    <!-- Healing Progress Bar -->
     <div id="heal-wrap">
       <div class="heal-label">💊 USING MEDKIT...</div>
       <div class="heal-bg"><div id="heal-fill"></div></div>
     </div>
 
-    <!-- Loot Pickup Button -->
     <button id="loot-btn" onclick="collectNearbyLoot()">📦 PICK UP LOOT</button>
 
-    <!-- Bottom Center: Medkit, HP Bar & Gun Switch -->
     <div class="bottom-hud">
       <button id="medkit-btn" onclick="useMedkit()">💊 MEDKIT (3)</button>
 
@@ -139,7 +130,6 @@
       <button id="weapon-btn" onclick="switchWeapon()">🔫 AK-47 [30]</button>
     </div>
 
-    <!-- Touch Zones & Action Buttons -->
     <div id="look-zone"></div>
     <div id="joy-zone"><div id="joy-stick"></div></div>
 
@@ -151,7 +141,7 @@
     <div class="act-btn" id="fire-btn">FIRE</div>
   </div>
 
-  <!-- PROFILE & PHOTO DP MODAL -->
+  <!-- PROFILE MODAL -->
   <div id="profile-modal" class="modal-backdrop">
     <div class="modal-card">
       <h3>👤 PLAYER PROFILE & DP</h3>
@@ -170,7 +160,7 @@
     </div>
   </div>
 
-  <!-- OUTFITS / VAULT MODAL -->
+  <!-- VAULT / OUTFITS MODAL -->
   <div id="vault-modal" class="modal-backdrop">
     <div class="modal-card wide-modal">
       <h3>👕 CHARACTER OUTFITS (VAULT)</h3>
@@ -179,12 +169,10 @@
     </div>
   </div>
 
-  <!-- OWNER ADMIN PANEL MODAL -->
+  <!-- OWNER ADMIN PANEL -->
   <div id="owner-modal" class="modal-backdrop">
     <div class="modal-card wide-modal">
       <h3>👑 OWNER ADMIN PANEL</h3>
-
-      <!-- PIN Login -->
       <div id="owner-pin-step">
         <div class="setting-row">
           <label>Owner Secret PIN डालें (Default: 1234):</label>
@@ -196,7 +184,6 @@
         </div>
       </div>
 
-      <!-- Admin Controls -->
       <div id="owner-controls-step" style="display:none;">
         <div class="setting-row">
           <label>नया Season लॉन्च करें (New Season Name):</label>
@@ -205,19 +192,16 @@
             <button class="save-set-btn" style="width:auto;padding:0 14px;" onclick="saveNewSeason()">UPDATE</button>
           </div>
         </div>
-
         <hr style="border-color:#2c384a;margin:10px 0;">
-
         <div class="setting-row">
           <label>नया कपड़ा (New Outfit Bundle) जोड़ें:</label>
           <input type="text" id="admin-outfit-name" placeholder="ड्रेस का नाम (जैसे: Royal Gold)">
           <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
-            <small>जैकेट रंग:</small><input type="color" id="admin-outfit-color1" value="#ff9800">
-            <small>पैंट/आर्मर:</small><input type="color" id="admin-outfit-color2" value="#1a237e">
+            <small>रंग 1:</small><input type="color" id="admin-outfit-color1" value="#ff9800">
+            <small>रंग 2:</small><input type="color" id="admin-outfit-color2" value="#1a237e">
             <button class="save-set-btn" style="width:auto;padding:6px 12px;" onclick="addNewOutfit()">+ ADD DRESS</button>
           </div>
         </div>
-
         <button class="cancel-btn" style="width:100%;margin-top:8px;" onclick="closeModal('owner-modal')">CLOSE PANEL</button>
       </div>
     </div>
@@ -255,6 +239,8 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
   <script src="game.js"></script>
 </body>
-</html>
+  </html>
