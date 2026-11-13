@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Indian Battle Royale Game</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -11,49 +13,97 @@
   <!-- Portrait Warning -->
   <div id="rotate-msg">
     <h2>📱 फोन को आड़ा (Landscape) घुमाएं</h2>
-    <p>Indian Battle Royale Game खेलने के लिए स्क्रीन को रोटेट करें</p>
+    <p>Indian Battle Royale Game खेलने के लिए स्क्रीन रोटेट करें</p>
   </div>
 
   <!-- LOBBY SCREEN -->
   <div id="lobby">
+    <canvas id="lobby-canvas"></canvas>
+
     <div class="lobby-top">
-      <div class="logo-title">🇮🇳 INDIAN BATTLE ROYALE GAME</div>
+      <!-- Player Profile Card (Name + Photo DP) -->
+      <div class="profile-card" onclick="openProfileModal()">
+        <img id="player-dp-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='80' height='80' fill='%23ff6f00'/><text x='50%' y='55%' font-size='36' text-anchor='middle' fill='white' font-family='Arial'>🇮🇳</text></svg>" alt="DP">
+        <div class="profile-meta">
+          <div class="p-name-row">
+            <span id="player-name-display">COMMANDO_IND</span>
+            <span class="edit-tag">✏️</span>
+          </div>
+          <div class="p-rank">LEVEL 50 • HEROIC 🇮🇳</div>
+        </div>
+      </div>
+
+      <!-- Center Game Title & Active Season -->
+      <div class="title-cluster">
+        <div class="logo-title">INDIAN BATTLE ROYALE GAME</div>
+        <div class="season-pill" id="season-banner">🔥 SEASON 1: आरंभ</div>
+      </div>
+
+      <!-- Top Right Stats & Owner/Settings -->
       <div class="lobby-badges">
         <span class="badge" id="booyah-badge">BOOYAH: 0</span>
         <span class="badge" id="total-kills-badge">KILLS: 0</span>
-        <button class="icon-btn" onclick="openSettings()">⚙️ SETTINGS</button>
+        <button class="icon-btn owner-btn" onclick="openOwnerModal()">👑 OWNER</button>
+        <button class="icon-btn" onclick="openSettings()">⚙️</button>
       </div>
     </div>
 
     <div class="lobby-middle">
-      <div class="char-card">
-        <div class="rank-tag">HEROIC • INDIA SERVER 🇮🇳</div>
-        <h2>COMMANDO ARJUN (HD)</h2>
-        <p>• <b>Drag Headshot:</b> फायर बटन दबाकर ऊपर खींचें<br>
-           • <b>Weapons:</b> AK-47 (2X) + AWM Sniper (4X)<br>
-           • <b>Survival:</b> Medkit, Gloo Wall और Loot Boxes</p>
-      </div>
-      <button class="play-btn" onclick="startMatch()">START MATCH</button>
-    </div>
+      <!-- Left Menu Buttons (Vault / Outfits & Profile) -->
+      <div class="lobby-menu-left">
+        <button class="menu-tile" onclick="openVaultModal()">
+          <span class="tile-icon">👕</span>
+          <div>
+            <strong>VAULT / OUTFITS</strong>
+            <small id="equipped-outfit-label">Commando Navy</small>
+          </div>
+        </button>
 
-    <div class="lobby-bottom">
-      <span>Mode: Classic Battle Royale (Solo)</span>
-      <span>Graphics: HD 3D Engine</span>
+        <button class="menu-tile" onclick="openProfileModal()">
+          <span class="tile-icon">📸</span>
+          <div>
+            <strong>EDIT PROFILE & DP</strong>
+            <small>नाम और फोटो बदलें</small>
+          </div>
+        </button>
+      </div>
+
+      <!-- Right Start Match Button -->
+      <div class="lobby-right-start">
+        <div class="mode-box">
+          <span>MAP: BHARAT VALLEY (HD)</span>
+          <small>Squad / Solo • Ultra Graphics</small>
+        </div>
+        <button class="play-btn" onclick="startMatch()">START MATCH</button>
+      </div>
     </div>
   </div>
 
   <!-- IN-GAME HUD -->
   <div id="hud">
+    <!-- Realistic Optical Scope Overlay -->
+    <div id="scope-overlay">
+      <div class="scope-ring">
+        <div class="scope-line-h"></div>
+        <div class="scope-line-v"></div>
+        <div class="scope-dot"></div>
+        <div class="scope-tag" id="scope-zoom-text">2X OPTICAL</div>
+      </div>
+    </div>
+
     <div class="hud-top">
       <!-- Mini-Map Radar -->
       <div class="minimap-box">
-        <canvas id="minimap" width="110" height="110"></canvas>
+        <canvas id="minimap" width="104" height="104"></canvas>
       </div>
 
-      <!-- Match Stats -->
-      <div class="top-center-stats">
-        <div class="stat-pill" id="alive-box">ALIVE: 13 | KILLS: 0</div>
-        <div class="stat-pill zone-pill" id="zone-box">ZONE: 130m</div>
+      <!-- Match Stats & Kill Banner -->
+      <div class="top-center-wrap">
+        <div class="top-center-stats">
+          <div class="stat-pill" id="alive-box">ALIVE: 13 | KILLS: 0</div>
+          <div class="stat-pill zone-pill" id="zone-box">ZONE: 140m</div>
+        </div>
+        <div id="kill-banner">💀 HEADSHOT KILL!</div>
       </div>
 
       <!-- Top Right Controls -->
@@ -63,8 +113,9 @@
       </div>
     </div>
 
-    <!-- Center Aim & Popups -->
+    <!-- Center Crosshair, Hitmarker & Damage -->
     <div id="crosshair"></div>
+    <div id="hitmarker">✕</div>
     <div id="dmg-popup">-155</div>
 
     <!-- Healing Progress Bar -->
@@ -100,31 +151,99 @@
     <div class="act-btn" id="fire-btn">FIRE</div>
   </div>
 
+  <!-- PROFILE & PHOTO DP MODAL -->
+  <div id="profile-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <h3>👤 PLAYER PROFILE & DP</h3>
+      <div class="setting-row">
+        <label>अपना नाम लिखें (Player Name):</label>
+        <input type="text" id="input-player-name" maxlength="16" placeholder="अपना नाम लिखें...">
+      </div>
+      <div class="setting-row">
+        <label>गैलरी से अपनी फोटो DP चुनें:</label>
+        <input type="file" id="input-player-dp" accept="image/*" onchange="previewDP(event)">
+      </div>
+      <div class="modal-actions">
+        <button class="save-set-btn" onclick="saveProfile()">SAVE PROFILE</button>
+        <button class="cancel-btn" onclick="closeModal('profile-modal')">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTFITS / VAULT MODAL -->
+  <div id="vault-modal" class="modal-backdrop">
+    <div class="modal-card wide-modal">
+      <h3>👕 CHARACTER OUTFITS (VAULT)</h3>
+      <div id="outfit-list" class="outfit-grid"></div>
+      <button class="save-set-btn" style="margin-top:12px;" onclick="closeModal('vault-modal')">DONE</button>
+    </div>
+  </div>
+
+  <!-- OWNER ADMIN PANEL MODAL -->
+  <div id="owner-modal" class="modal-backdrop">
+    <div class="modal-card wide-modal">
+      <h3>👑 OWNER ADMIN PANEL</h3>
+
+      <!-- PIN Login -->
+      <div id="owner-pin-step">
+        <div class="setting-row">
+          <label>Owner Secret PIN डालें (Default: 1234):</label>
+          <input type="password" id="owner-pin-input" maxlength="6" placeholder="PIN डालें...">
+        </div>
+        <div class="modal-actions">
+          <button class="save-set-btn" onclick="verifyOwnerPin()">UNLOCK PANEL</button>
+          <button class="cancel-btn" onclick="closeModal('owner-modal')">CLOSE</button>
+        </div>
+      </div>
+
+      <!-- Admin Controls -->
+      <div id="owner-controls-step" style="display:none;">
+        <div class="setting-row">
+          <label>नया Season लॉन्च करें (New Season Name):</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="admin-season-input" placeholder="उदा: SEASON 2: शेर-ए-हिंद">
+            <button class="save-set-btn" style="width:auto;padding:0 14px;" onclick="saveNewSeason()">UPDATE</button>
+          </div>
+        </div>
+
+        <hr style="border-color:#2c384a;margin:10px 0;">
+
+        <div class="setting-row">
+          <label>नया कपड़ा (New Outfit Bundle) जोड़ें:</label>
+          <input type="text" id="admin-outfit-name" placeholder="ड्रेस का नाम (जैसे: Royal Gold)">
+          <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
+            <small>जैकेट रंग:</small><input type="color" id="admin-outfit-color1" value="#ff9800">
+            <small>पैंट/आर्मर:</small><input type="color" id="admin-outfit-color2" value="#1a237e">
+            <button class="save-set-btn" style="width:auto;padding:6px 12px;" onclick="addNewOutfit()">+ ADD DRESS</button>
+          </div>
+        </div>
+
+        <button class="cancel-btn" style="width:100%;margin-top:8px;" onclick="closeModal('owner-modal')">CLOSE PANEL</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SETTINGS MODAL -->
-  <div id="settings-modal">
+  <div id="settings-modal" class="modal-backdrop">
     <div class="modal-card">
       <h3>⚙️ GAME SETTINGS</h3>
-
       <div class="setting-row">
-        <label>General Sensitivity: <span id="sens-gen-val">50</span></label>
-        <input type="range" id="sens-general" min="15" max="100" value="50" oninput="updateSettingsUI()">
+        <label>Camera & Fire Rotation Speed: <span id="sens-gen-val">55</span></label>
+        <input type="range" id="sens-general" min="20" max="100" value="55" oninput="updateSettingsUI()">
       </div>
-
       <div class="setting-row">
-        <label>Scope / Drag Sensitivity: <span id="sens-scp-val">45</span></label>
-        <input type="range" id="sens-scope" min="15" max="100" value="45" oninput="updateSettingsUI()">
+        <label>Scope & Drag Headshot Speed: <span id="sens-scp-val">50</span></label>
+        <input type="range" id="sens-scope" min="20" max="100" value="50" oninput="updateSettingsUI()">
       </div>
-
       <div class="setting-row">
         <label>Graphics Quality:</label>
         <select id="gfx-quality" onchange="applyGraphicsQuality()">
           <option value="low">SMOOTH (Low)</option>
           <option value="medium">STANDARD (Medium)</option>
-          <option value="high" selected>ULTRA HD (High)</option>
+          <option value="high" selected>ULTRA HD + SHADOWS</option>
         </select>
       </div>
-
-      <button class="save-set-btn" onclick="closeSettings()">SAVE & CLOSE</button>
+      <button class="save-set-btn" onclick="closeModal('settings-modal')">SAVE & CLOSE</button>
     </div>
   </div>
 
