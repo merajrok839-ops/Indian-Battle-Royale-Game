@@ -69,11 +69,23 @@
 
       <div class="lobby-right-start">
         <div class="mode-box">
-          <span>MAP: BHARAT VALLEY (HD)</span>
-          <small>Real 3D Character • Ultra Graphics</small>
+          <span>MAP: BHARAT ISLAND (FULL 3D)</span>
+          <small>Airplane Drop • Katana • Climbable Houses</small>
         </div>
         <button class="play-btn" onclick="startMatch()">START MATCH</button>
       </div>
+    </div>
+  </div>
+
+  <!-- AIRPLANE & PARACHUTE DROP OVERLAY -->
+  <div id="flight-hud">
+    <div class="flight-top-bar">
+      <span id="flight-status-text">✈️ BHARAT AIRFORCE • जहाज से कूदने की जगह चुनें</span>
+      <span id="altitude-box">ALTITUDE: 110m</span>
+    </div>
+    <div class="flight-actions">
+      <button id="eject-btn" class="drop-action-btn" onclick="ejectFromPlane()">🪂 JUMP / कूदें</button>
+      <button id="chute-btn" class="drop-action-btn chute-style" style="display:none;" onclick="deployParachute()">☂️ OPEN PARACHUTE</button>
     </div>
   </div>
 
@@ -97,7 +109,7 @@
       <div class="top-center-wrap">
         <div class="top-center-stats">
           <div class="stat-pill" id="alive-box">ALIVE: 13 | KILLS: 0</div>
-          <div class="stat-pill zone-pill" id="zone-box">ZONE: 140m</div>
+          <div class="stat-pill zone-pill" id="zone-box">ZONE: 155m</div>
         </div>
         <div id="kill-banner">💀 HEADSHOT KILL!</div>
       </div>
@@ -119,11 +131,13 @@
 
     <button id="loot-btn" onclick="collectNearbyLoot()">📦 PICK UP LOOT</button>
 
+    <!-- Bottom Center: Medkit, Armor + HP Bars & Weapon Switch -->
     <div class="bottom-hud">
-      <button id="medkit-btn" onclick="useMedkit()">💊 MEDKIT (3)</button>
+      <button id="medkit-btn" onclick="useMedkit()">💊 MEDKIT (4)</button>
 
       <div class="hp-container">
-        <div id="hp-text">HP: 200 / 200</div>
+        <div class="armor-bg"><div id="armor-fill"></div></div>
+        <div id="hp-text">ARMOR: 150 | HP: 200</div>
         <div class="hp-bg"><div id="hp-fill"></div></div>
       </div>
 
@@ -134,7 +148,7 @@
     <div id="joy-zone"><div id="joy-stick"></div></div>
 
     <div class="act-btn" id="reload-btn">RELOAD</div>
-    <div class="act-btn" id="gloo-btn">GLOO (5)</div>
+    <div class="act-btn" id="gloo-btn">GLOO (6)</div>
     <div class="act-btn" id="crouch-btn">SIT</div>
     <div class="act-btn" id="scope-btn">2X</div>
     <div class="act-btn" id="jump-btn">JUMP</div>
@@ -243,4 +257,4 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
   <script src="game.js"></script>
 </body>
-  </html>
+                                                                                 </html>
