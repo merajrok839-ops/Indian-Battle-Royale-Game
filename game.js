@@ -1,9 +1,9 @@
 // ================= SAVED DATA & DEFAULT STATE =================
 const defaultOutfits = [
   { id: 'navy', name: 'Commando Navy', c1: '#1565c0', c2: '#1c2630', helm: '#212121' },
-  { id: 'army', name: 'Bharat Army Camo', c1: '#33691e', c2: '#263238', helm: '#1b5e20' },
-  { id: 'gold', name: 'Royal Golden Raja', c1: '#ff8f00', c2: '#3e2723', helm: '#ffd54f' },
-  { id: 'cobra', name: 'Black Cobra Ops', c1: '#212121', c2: '#b71c1c', helm: '#000000' }
+  { id: 'army', name: 'Bharat Army Camo', c1: '#4b6b32', c2: '#2d3b22', helm: '#334726' },
+  { id: 'gold', name: 'Royal Golden Raja', c1: '#ff9800', c2: '#4e342e', helm: '#ffd54f' },
+  { id: 'cobra', name: 'Black Cobra Ops', c1: '#222222', c2: '#b71c1c', helm: '#111111' }
 ];
 
 let outfits = JSON.parse(localStorage.getItem('ibr_outfits')) || defaultOutfits;
@@ -15,13 +15,38 @@ let totalKills = parseInt(localStorage.getItem('ibr_kills')) || 0;
 let booyahWins = parseInt(localStorage.getItem('ibr_booyah')) || 0;
 let tempDPData = '';
 
+// ================= REAL 3D HUMAN MODEL LOADER =================
+let baseSoldierGLTF = null;
+let modelReady = false;
+const SOLDIER_MODEL_URL = 'https://threejs.org/examples/models/gltf/Soldier.glb';
+
+function preloadRealHumanModel(onLoaded) {
+  if (modelReady && baseSoldierGLTF) {
+    if (onLoaded) onLoaded();
+    return;
+  }
+  if (typeof THREE.GLTFLoader === 'undefined') return;
+  const loader = new THREE.GLTFLoader();
+  loader.load(
+    SOLDIER_MODEL_URL,
+    (gltf) => {
+      baseSoldierGLTF = gltf;
+      modelReady = true;
+      if (onLoaded) onLoaded();
+    },
+    undefined,
+    (err) => { console.warn('Model fallback active:', err); }
+  );
+}
+
 // ================= 3D ENGINE VARIABLES =================
-let scene, camera, renderer, playerGroup, leftLeg, rightLeg, leftArm, rightArm, torsoMesh, pantsMesh, helmetMesh, gunMesh, muzzleFlash, zoneRing;
-let lobbyScene, lobbyCamera, lobbyRenderer, lobbyCharGroup;
+let scene, camera, renderer, playerGroup, playerMixer, playerIdleAct, playerRunAct, currentPlayerAction;
+let gunMesh, ak47Group, awmGroup, muzzleFlash, zoneRing;
+let lobbyScene, lobbyCamera, lobbyRenderer, lobbyCharGroup, lobbyMixer;
 let gameActive = false, playerHP = 200, medkits = 3, glooCount = 5;
 let kills = 0, headshots = 0;
 let isScoped = false, isCrouching = false, isFiring = false, isHealing = false;
-let lastShotTime = 0, healTimer = 0, walkAnimTime = 0;
+let lastShotTime = 0, healTimer = 0;
 let playerYaw = 0, playerPitch = 0, velY = 0, isGrounded = true;
 let joyX = 0, joyY = 0, zoneRadius = 140;
 
@@ -74,11 +99,11 @@ function playSound(type) {
     osc.start(now); osc.stop(now + 0.25);
   } else if (type === 'gloo') {
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(240, now);
-    osc.frequency.exponentialRampToValueAtTime(560, now + 0.15);
-    gain.gain.setValueAtTime(0.25, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-    osc.start(now); osc.stop(now + 0.15);
+    osc.frequency.setValueAtTime(280, now);
+    osc.frequency.exponentialRampToValueAtTime(640, now + 0.18);
+    gain.gain.setValueAtTime(0.28, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+    osc.start(now); osc.stop(now + 0.18);
   }
 }
 
@@ -87,23 +112,16 @@ function createTerrainTexture() {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 512;
   const ctx = c.getContext('2d');
-
-  // Rich olive-earth grass base
   ctx.fillStyle = '#3d632c';
   ctx.fillRect(0, 0, 512, 512);
-
-  // Organic soil & grass variation
   for (let i = 0; i < 4500; i++) {
     const r = Math.random();
     ctx.fillStyle = r < 0.35 ? '#2f4f21' : (r < 0.7 ? '#4c7536' : '#5c6b3c');
     ctx.fillRect(Math.random() * 512, Math.random() * 512, 3, 3);
   }
-
-  // Dirt Road Cross-Path
   ctx.fillStyle = '#796349';
   ctx.fillRect(230, 0, 52, 512);
   ctx.fillRect(0, 230, 512, 52);
-
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(14, 14);
@@ -116,13 +134,8 @@ function createBuildingTexture() {
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#cfc3b4';
   ctx.fillRect(0, 0, 256, 256);
-
-  // Plaster & Brick detail
   ctx.fillStyle = '#b8aa99';
-  for (let i = 0; i < 600; i++) {
-    ctx.fillRect(Math.random() * 256, Math.random() * 256, 4, 2);
-  }
-  // Windows
+  for (let i = 0; i < 600; i++) ctx.fillRect(Math.random() * 256, Math.random() * 256, 4, 2);
   ctx.fillStyle = '#1c2833';
   ctx.fillRect(36, 55, 52, 65);
   ctx.fillRect(168, 55, 52, 65);
@@ -130,7 +143,6 @@ function createBuildingTexture() {
   ctx.lineWidth = 4;
   ctx.strokeRect(36, 55, 52, 65);
   ctx.strokeRect(168, 55, 52, 65);
-
   return new THREE.CanvasTexture(c);
 }
 
@@ -147,98 +159,161 @@ function createContainerTexture(baseColor) {
   return new THREE.CanvasTexture(c);
 }
 
-// ================= ARTICULATED 3D SOLDIER BUILDER =================
+// ================= FREE FIRE STYLE CRYSTALLINE GLOO WALL TEXTURE =================
+function createGlooWallTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const ctx = c.getContext('2d');
+
+  // Deep Ice-Blue Gradient Base
+  const grad = ctx.createLinearGradient(0, 0, 256, 256);
+  grad.addColorStop(0, '#00b0ff');
+  grad.addColorStop(0.5, '#006064');
+  grad.addColorStop(1, '#01579b');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 256, 256);
+
+  // Hexagonal / Crystal Ice Shards
+  ctx.strokeStyle = 'rgba(224, 247, 250, 0.75)';
+  ctx.lineWidth = 2.5;
+  for (let i = 0; i < 28; i++) {
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    const r = 18 + Math.random() * 28;
+    ctx.beginPath();
+    for (let s = 0; s < 6; s++) {
+      const ang = (Math.PI * 2 * s) / 6;
+      const px = x + Math.cos(ang) * r;
+      const py = y + Math.sin(ang) * r;
+      if (s === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(128, 222, 234, 0.18)';
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Glowing Neon Cyan Rim Border
+  ctx.strokeStyle = '#84ffff';
+  ctx.lineWidth = 10;
+  ctx.strokeRect(5, 5, 246, 246);
+
+  return new THREE.CanvasTexture(c);
+}
+
+// ================= DETAILED 3D WEAPON BUILDER (AK-47 & AWM) =================
+function createDetailedWeapons() {
+  // AK-47 Assault Rifle
+  const ak = new THREE.Group();
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, metalness: 0.85, roughness: 0.25 });
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x6d3b1e, roughness: 0.65 });
+
+  const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.11, 0.45), metalMat);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.018, 0.42, 10), metalMat);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0, 0.02, -0.42);
+  const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.24), woodMat);
+  handguard.position.set(0, 0.01, -0.28);
+  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.28), woodMat);
+  stock.position.set(0, -0.02, 0.34);
+  stock.rotation.x = 0.15;
+  const curvedMag = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.22, 0.09), new THREE.MeshStandardMaterial({ color: 0x8d4925, roughness: 0.5 }));
+  curvedMag.position.set(0, -0.14, -0.08);
+  curvedMag.rotation.x = 0.32;
+  ak.add(receiver, barrel, handguard, stock, curvedMag);
+
+  // AWM Sniper Rifle
+  const awm = new THREE.Group();
+  const sniperBodyMat = new THREE.MeshStandardMaterial({ color: 0x3b5323, roughness: 0.55 });
+  const sBody = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.11, 0.65), sniperBodyMat);
+  const sBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, 0.55, 10), metalMat);
+  sBarrel.rotation.x = Math.PI / 2;
+  sBarrel.position.set(0, 0.02, -0.58);
+  const muzzleBrake = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.08), metalMat);
+  muzzleBrake.position.set(0, 0.02, -0.86);
+  const scopeTube = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.34, 12), metalMat);
+  scopeTube.rotation.x = Math.PI / 2;
+  scopeTube.position.set(0, 0.1, -0.08);
+  const scopeLens = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.035, 0.09, 12), metalMat);
+  scopeLens.rotation.x = Math.PI / 2;
+  scopeLens.position.set(0, 0.1, -0.25);
+  awm.add(sBody, sBarrel, muzzleBrake, scopeTube, scopeLens);
+  awm.visible = false;
+
+  const holder = new THREE.Group();
+  holder.add(ak, awm);
+
+  const flash = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffea00 }));
+  flash.position.set(0, 0.02, -0.75);
+  flash.visible = false;
+  holder.add(flash);
+
+  return { holder, ak, awm, flash };
+}
+
+// ================= REAL 3D HUMAN SOLDIER INSTANTIATOR =================
 function getCurrentOutfit() {
   return outfits.find(o => o.id === equippedOutfitId) || outfits[0];
 }
 
-function createSoldierMesh(outfit) {
-  const root = new THREE.Group();
+function createRealHumanCharacter(outfit, isEnemy = false) {
+  const wrapper = new THREE.Group();
 
-  const skinMat = new THREE.MeshStandardMaterial({ color: 0xe0ac69, roughness: 0.6 });
-  const shirtMat = new THREE.MeshStandardMaterial({ color: outfit.c1, roughness: 0.5 });
-  const pantsMat = new THREE.MeshStandardMaterial({ color: outfit.c2, roughness: 0.7 });
-  const vestMat = new THREE.MeshStandardMaterial({ color: 0x1c222b, roughness: 0.4 });
-  const helmMat = new THREE.MeshStandardMaterial({ color: outfit.helm, roughness: 0.3, metalness: 0.3 });
-  const bootMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+  if (modelReady && baseSoldierGLTF && typeof THREE.SkeletonUtils !== 'undefined') {
+    const model = THREE.SkeletonUtils.clone(baseSoldierGLTF.scene);
+    model.scale.set(1.12, 1.12, 1.12);
 
-  // Left Leg + Boot
-  const lLeg = new THREE.Group();
-  lLeg.position.set(-0.17, 0.78, 0);
-  const lThigh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.68, 10), pantsMat);
-  lThigh.position.y = -0.34;
-  const lBoot = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.16, 0.28), bootMat);
-  lBoot.position.set(0, -0.7, -0.04);
-  lLeg.add(lThigh, lBoot);
+    // Apply Custom Outfit Color Tint to Soldier Uniform
+    const tintColor = new THREE.Color(isEnemy ? '#d32f2f' : outfit.c1);
+    model.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        if (child.material) {
+          child.material = child.material.clone();
+          child.material.color.lerp(tintColor, 0.55);
+        }
+      }
+    });
 
-  // Right Leg + Boot
-  const rLeg = new THREE.Group();
-  rLeg.position.set(0.17, 0.78, 0);
-  const rThigh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.68, 10), pantsMat);
-  rThigh.position.y = -0.34;
-  const rBoot = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.16, 0.28), bootMat);
-  rBoot.position.set(0, -0.7, -0.04);
-  rLeg.add(rThigh, rBoot);
+    wrapper.add(model);
 
-  // Torso & Tactical Armor Vest
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.23, 0.76, 12), shirtMat);
-  torso.position.y = 1.16;
-  torso.scale.set(1.15, 1, 0.75);
+    // Attach Detailed Rifle to Soldier's Right Side
+    const wep = createDetailedWeapons();
+    wep.holder.position.set(0.24, 1.24, -0.28);
+    wrapper.add(wep.holder);
 
-  const vest = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.52, 0.36), vestMat);
-  vest.position.y = 1.18;
+    // Setup Skeleton Animations (Idle & Run)
+    const mixer = new THREE.AnimationMixer(model);
+    const clips = baseSoldierGLTF.animations;
+    const idleClip = THREE.AnimationClip.findByName(clips, 'Idle') || clips[0];
+    const runClip = THREE.AnimationClip.findByName(clips, 'Run') || clips[1] || clips[0];
 
-  // Military Backpack
-  const bag = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.48, 0.22), new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.8 }));
-  bag.position.set(0, 1.2, 0.26);
+    const idleAct = mixer.clipAction(idleClip);
+    const runAct = mixer.clipAction(runClip);
+    idleAct.play();
 
-  // Neck, Head & Visor Helmet
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.21, 14, 14), skinMat);
-  head.position.y = 1.72;
+    return { root: wrapper, mixer, idleAct, runAct, activeAct: idleAct, wep, isRealGLB: true };
+  }
 
-  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 14, 0, Math.PI * 2, 0, Math.PI * 0.62), helmMat);
-  helmet.position.y = 1.75;
+  // Fallback while network loads model
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.25, 1.7, 12), new THREE.MeshStandardMaterial({ color: isEnemy ? 0xc62828 : outfit.c1 }));
+  body.position.y = 0.85;
+  wrapper.add(body);
+  const wep = createDetailedWeapons();
+  wep.holder.position.set(0.3, 1.2, -0.3);
+  wrapper.add(wep.holder);
+  return { root: wrapper, mixer: null, wep, isRealGLB: false };
+}
 
-  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.09, 0.12), new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x006064 }));
-  visor.position.set(0, 1.74, -0.19);
-
-  // Left Arm
-  const lArm = new THREE.Group();
-  lArm.position.set(-0.37, 1.44, 0);
-  const lArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.56, 8), shirtMat);
-  lArmMesh.position.set(0.08, -0.22, -0.18);
-  lArmMesh.rotation.x = 0.75;
-  lArm.add(lArmMesh);
-
-  // Right Arm + Detailed Assault Rifle
-  const rArm = new THREE.Group();
-  rArm.position.set(0.37, 1.44, 0);
-  const rArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.54, 8), shirtMat);
-  rArmMesh.position.set(-0.04, -0.18, -0.2);
-  rArmMesh.rotation.x = 1.1;
-
-  const gunGroup = new THREE.Group();
-  gunGroup.position.set(-0.06, -0.24, -0.45);
-  const bodyGun = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.13, 0.65), new THREE.MeshStandardMaterial({ color: 0x181818, metalness: 0.7, roughness: 0.3 }));
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.38, 8), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 }));
-  barrel.rotation.x = Math.PI / 2;
-  barrel.position.set(0, 0.02, -0.48);
-  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.2, 0.1), new THREE.MeshStandardMaterial({ color: 0x5d4037 }));
-  mag.position.set(0, -0.12, -0.12);
-  mag.rotation.x = 0.25;
-  gunGroup.add(bodyGun, barrel, mag);
-
-  const flash = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffea00 }));
-  flash.position.set(0, 0.02, -0.72);
-  flash.visible = false;
-  gunGroup.add(flash);
-
-  rArm.add(rArmMesh, gunGroup);
-
-  root.add(lLeg, rLeg, torso, vest, bag, head, helmet, visor, lArm, rArm);
-  root.traverse(obj => { if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; } });
-
-  return { root, lLeg, rLeg, lArm, rArm, torso, lThigh, rThigh, helmet, gunGroup, flash };
+function setCharacterAnim(charObj, moving) {
+  if (!charObj || !charObj.mixer || !charObj.isRealGLB) return;
+  const target = moving ? charObj.runAct : charObj.idleAct;
+  if (charObj.activeAct !== target) {
+    charObj.activeAct.fadeOut(0.18);
+    target.reset().fadeIn(0.18).play();
+    charObj.activeAct = target;
+  }
 }
 
 // ================= LOBBY 3D PREVIEW & UI SYNC =================
@@ -246,35 +321,36 @@ function initLobby3D() {
   const canvas = document.getElementById('lobby-canvas');
   if (!canvas) return;
   lobbyScene = new THREE.Scene();
-  lobbyCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 50);
-  lobbyCamera.position.set(0, 1.35, 3.6);
+  lobbyCamera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 50);
+  lobbyCamera.position.set(0, 1.25, 3.8);
 
   lobbyRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
   lobbyRenderer.setSize(window.innerWidth, window.innerHeight);
   lobbyRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x263238, 1.1);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x263238, 1.25);
   lobbyScene.add(hemi);
-  const dir = new THREE.DirectionalLight(0xffecb3, 1.2);
-  dir.position.set(3, 5, 4);
+  const dir = new THREE.DirectionalLight(0xffecb3, 1.4);
+  dir.position.set(3, 6, 4);
   lobbyScene.add(dir);
 
-  // Pedestal Platform
   const ped = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.95, 1.1, 0.14, 32),
-    new THREE.MeshStandardMaterial({ color: 0x263238, metalness: 0.6, roughness: 0.3 })
+    new THREE.CylinderGeometry(0.95, 1.15, 0.14, 32),
+    new THREE.MeshStandardMaterial({ color: 0x1c2636, metalness: 0.7, roughness: 0.25 })
   );
   ped.position.y = -0.07;
   lobbyScene.add(ped);
 
+  preloadRealHumanModel(() => rebuildLobbyCharacter());
   rebuildLobbyCharacter();
 }
 
 function rebuildLobbyCharacter() {
   if (!lobbyScene) return;
   if (lobbyCharGroup) lobbyScene.remove(lobbyCharGroup);
-  const built = createSoldierMesh(getCurrentOutfit());
+  const built = createRealHumanCharacter(getCurrentOutfit(), false);
   lobbyCharGroup = built.root;
+  lobbyMixer = built.mixer;
   lobbyScene.add(lobbyCharGroup);
 }
 
@@ -419,22 +495,20 @@ function init3D() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
-  const hemiLight = new THREE.HemisphereLight(0xfff8e7, 0x3b5323, 0.85);
+  const hemiLight = new THREE.HemisphereLight(0xfff8e7, 0x3b5323, 0.95);
   scene.add(hemiLight);
 
-  const dirLight = new THREE.DirectionalLight(0xfff1d6, 1.1);
+  const dirLight = new THREE.DirectionalLight(0xfff1d6, 1.15);
   dirLight.position.set(70, 110, 60);
   dirLight.castShadow = true;
   dirLight.shadow.mapSize.width = 1024;
   dirLight.shadow.mapSize.height = 1024;
   scene.add(dirLight);
 
-  // Sun Disc in Sky
   const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(8, 16, 16), new THREE.MeshBasicMaterial({ color: 0xfff59d }));
   sunMesh.position.set(120, 140, -160);
   scene.add(sunMesh);
 
-  // Textured Terrain
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(340, 340),
     new THREE.MeshStandardMaterial({ map: createTerrainTexture(), roughness: 0.9 })
@@ -443,7 +517,6 @@ function init3D() {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  // Safe Zone Blue Energy Wall
   zoneRing = new THREE.Mesh(
     new THREE.CylinderGeometry(zoneRadius, zoneRadius, 18, 64, 1, true),
     new THREE.MeshBasicMaterial({ color: 0x00b0ff, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
@@ -460,7 +533,6 @@ function buildRealisticMap() {
   const roofMat = new THREE.MeshStandardMaterial({ color: 0x8d3b24, roughness: 0.7 });
   const sandbagMat = new THREE.MeshStandardMaterial({ color: 0xa1887f, roughness: 0.9 });
 
-  // Detailed Compounds & Houses
   const houses = [
     [22, 18, 9, 4.4, 7], [-25, 22, 10, 4.6, 8], [28, -28, 9, 4.2, 8],
     [-28, -26, 11, 5, 9], [0, -34, 14, 4.8, 8]
@@ -477,7 +549,6 @@ function buildRealisticMap() {
     scene.add(roof);
   });
 
-  // Military Shipping Containers
   const containers = [
     [12, -10, '#1565c0', 0.3], [-14, -8, '#c62828', -0.4], [14, 32, '#2e7d32', 1.4]
   ];
@@ -492,7 +563,6 @@ function buildRealisticMap() {
     scene.add(cont); obstacles.push(cont);
   });
 
-  // Sandbag Cover Bunkers
   const bunkers = [[0, 15], [-9, 4], [9, 3], [-15, 20], [18, -18]];
   bunkers.forEach(([x, z]) => {
     const bunker = new THREE.Mesh(new THREE.BoxGeometry(3.6, 1.15, 0.9), sandbagMat);
@@ -501,7 +571,6 @@ function buildRealisticMap() {
     scene.add(bunker); obstacles.push(bunker);
   });
 
-  // Multi-Foliage Realistic Trees
   const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.9 });
   const leafMat1 = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.8 });
   const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 0.8 });
@@ -529,17 +598,19 @@ function buildRealisticMap() {
   }
 }
 
+let playerCharObj = null;
 function buildPlayerCharacter() {
   if (playerGroup) scene.remove(playerGroup);
-  const built = createSoldierMesh(getCurrentOutfit());
-  playerGroup = built.root;
-  leftLeg = built.lLeg;
-  rightLeg = built.rLeg;
-  leftArm = built.lArm;
-  rightArm = built.rArm;
-  torsoMesh = built.torso;
-  gunMesh = built.gunGroup;
-  muzzleFlash = built.flash;
+  playerCharObj = createRealHumanCharacter(getCurrentOutfit(), false);
+  playerGroup = playerCharObj.root;
+  playerMixer = playerCharObj.mixer;
+  playerIdleAct = playerCharObj.idleAct;
+  playerRunAct = playerCharObj.runAct;
+  currentPlayerAction = playerCharObj.activeAct;
+  gunMesh = playerCharObj.wep.holder;
+  ak47Group = playerCharObj.wep.ak;
+  awmGroup = playerCharObj.wep.awm;
+  muzzleFlash = playerCharObj.wep.flash;
   scene.add(playerGroup);
 }
 
@@ -549,18 +620,17 @@ function spawnEnemies(count) {
 
   const enemyOutfit = { c1: '#b71c1c', c2: '#212121', helm: '#ffca28' };
   for (let i = 0; i < count; i++) {
-    const built = createSoldierMesh(enemyOutfit);
-    const group = built.root;
+    const charObj = createRealHumanCharacter(enemyOutfit, true);
+    const group = charObj.root;
 
-    // Hitboxes
-    const bodyHit = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.15, 0.5), new THREE.MeshBasicMaterial({ visible: false }));
-    bodyHit.position.y = 1.05;
-    const headHit = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 10), new THREE.MeshBasicMaterial({ visible: false }));
+    const bodyHit = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.25, 0.55), new THREE.MeshBasicMaterial({ visible: false }));
+    bodyHit.position.y = 0.95;
+    const headHit = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 10), new THREE.MeshBasicMaterial({ visible: false }));
     headHit.position.y = 1.78;
 
     const enemyObj = {
-      group, headHit, bodyHit, lLeg: built.lLeg, rLeg: built.rLeg,
-      hp: 160, alive: true, shootTimer: 1 + Math.random() * 2, anim: Math.random() * 5
+      group, charObj, headHit, bodyHit,
+      hp: 160, alive: true, shootTimer: 1 + Math.random() * 2
     };
     bodyHit.userData = { isHead: false, enemy: enemyObj };
     headHit.userData = { isHead: true, enemy: enemyObj };
@@ -651,7 +721,10 @@ function switchWeapon() {
   camera.updateProjectionMatrix();
   document.getElementById('scope-overlay').style.display = 'none';
   document.getElementById('scope-btn').style.background = 'rgba(12, 18, 30, 0.62)';
-  gunMesh.scale.z = currentWeaponIdx === 1 ? 1.45 : 1.0;
+  if (ak47Group && awmGroup) {
+    ak47Group.visible = currentWeaponIdx === 0;
+    awmGroup.visible = currentWeaponIdx === 1;
+  }
   updateHUD();
 }
 
@@ -721,12 +794,11 @@ function fireWeapon() {
   updateHUD();
   playSound('shoot');
 
-  // Muzzle Flash & Recoil
   muzzleFlash.visible = true;
-  gunMesh.position.z = -0.34;
+  gunMesh.position.z = -0.18;
   setTimeout(() => {
     if (muzzleFlash) muzzleFlash.visible = false;
-    if (gunMesh) gunMesh.position.z = -0.45;
+    if (gunMesh) gunMesh.position.z = -0.28;
   }, 60);
 
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
@@ -783,20 +855,39 @@ function reloadWeapon() {
   updateHUD();
 }
 
+// ================= CURVED CRYSTALLINE FREE FIRE GLOO WALL =================
+let glooTexCache = null;
 function placeGlooWall() {
   if (glooCount <= 0) return;
   glooCount--;
   updateHUD();
   playSound('gloo');
 
-  const gloo = new THREE.Mesh(
-    new THREE.BoxGeometry(3.6, 2.5, 0.35),
-    new THREE.MeshStandardMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.78, roughness: 0.2 })
+  if (!glooTexCache) glooTexCache = createGlooWallTexture();
+
+  // Curved Shield Cylinder Segment (Free Fire Style)
+  const glooGeo = new THREE.CylinderGeometry(
+    2.6, 2.6, 2.45, 24, 1, false,
+    Math.PI - 0.72, 1.44
   );
-  const fx = -Math.sin(playerYaw) * 3.4;
-  const fz = -Math.cos(playerYaw) * 3.4;
-  gloo.position.set(playerGroup.position.x + fx, 1.25, playerGroup.position.z + fz);
+  const glooMat = new THREE.MeshStandardMaterial({
+    map: glooTexCache,
+    color: 0x40c4ff,
+    emissive: 0x004d66,
+    roughness: 0.15,
+    metalness: 0.25,
+    transparent: true,
+    opacity: 0.9,
+    side: THREE.DoubleSide
+  });
+
+  const gloo = new THREE.Mesh(glooGeo, glooMat);
+  const fx = -Math.sin(playerYaw) * 1.1;
+  const fz = -Math.cos(playerYaw) * 1.1;
+  gloo.position.set(playerGroup.position.x + fx, 1.22, playerGroup.position.z + fz);
   gloo.rotation.y = playerYaw;
+  gloo.castShadow = true;
+  gloo.receiveShadow = true;
   scene.add(gloo);
   obstacles.push(gloo);
 }
@@ -858,7 +949,7 @@ function drawMiniMap() {
   ctx.fill();
 }
 
-// ================= MULTI-TOUCH CONTROLS (FREE FIRE STYLE) =================
+// ================= MULTI-TOUCH CONTROLS =================
 let joyTouchId = null, lookTouchId = null, fireTouchId = null;
 let lastLookX = 0, lastLookY = 0, lastFireX = 0, lastFireY = 0;
 
@@ -910,7 +1001,7 @@ lookZone.addEventListener('touchend', e => {
   for (let t of e.changedTouches) { if (t.identifier === lookTouchId) lookTouchId = null; }
 });
 
-// FIRE BUTTON: Full 360° Rotation + Upward Drag-Headshot while Firing!
+// FIRE BUTTON: Full Rotation + Drag-Headshot while Firing
 const fireBtn = document.getElementById('fire-btn');
 fireBtn.addEventListener('touchstart', e => {
   e.stopPropagation();
@@ -971,9 +1062,10 @@ function animate() {
   const dt = Math.min(0.05, (now - prevTime) / 1000);
   prevTime = now;
 
-  // Lobby 3D Character Rotation
+  // Lobby 3D Character Animation & Rotation
   if (!gameActive && lobbyRenderer && lobbyScene && lobbyCamera) {
-    if (lobbyCharGroup) lobbyCharGroup.rotation.y += dt * 0.7;
+    if (lobbyMixer) lobbyMixer.update(dt);
+    if (lobbyCharGroup) lobbyCharGroup.rotation.y += dt * 0.65;
     lobbyRenderer.render(lobbyScene, lobbyCamera);
   }
 
@@ -981,7 +1073,10 @@ function animate() {
   if (gameActive && playerGroup) {
     if (isFiring && currentWeaponIdx === 0) fireWeapon();
 
-    // Movement & Realistic Leg/Arm Animation
+    const isMoving = Math.hypot(joyX, joyY) > 0.1;
+    setCharacterAnim(playerCharObj, isMoving);
+    if (playerMixer) playerMixer.update(dt);
+
     const moveSpeed = (isCrouching ? 6.2 : 12.0) * dt;
     const forward = new THREE.Vector3(-Math.sin(playerYaw), 0, -Math.cos(playerYaw));
     const right = new THREE.Vector3(Math.cos(playerYaw), 0, -Math.sin(playerYaw));
@@ -989,19 +1084,9 @@ function animate() {
     playerGroup.position.addScaledVector(right, joyX * moveSpeed);
     playerGroup.rotation.y = playerYaw;
 
-    // Realistic Crouch Stance
+    // Crouch Stance
     const targetScaleY = isCrouching ? 0.72 : 1.0;
     playerGroup.scale.y += (targetScaleY - playerGroup.scale.y) * 0.25;
-
-    if (Math.hypot(joyX, joyY) > 0.1) {
-      walkAnimTime += dt * 13;
-      leftLeg.rotation.x = Math.sin(walkAnimTime) * 0.7;
-      rightLeg.rotation.x = -Math.sin(walkAnimTime) * 0.7;
-      leftArm.rotation.z = Math.sin(walkAnimTime) * 0.08;
-    } else {
-      leftLeg.rotation.x = 0;
-      rightLeg.rotation.x = 0;
-    }
 
     // Jump & Gravity
     playerGroup.position.y += velY;
@@ -1063,19 +1148,20 @@ function animate() {
       if (playerHP <= 0) endMatch(false);
     }
 
-    // Enemy AI
+    // Enemy AI & Skeleton Animations
     enemies.forEach(enemy => {
       if (!enemy.alive) return;
+      if (enemy.charObj && enemy.charObj.mixer) enemy.charObj.mixer.update(dt);
+
       const toPlayer = new THREE.Vector3().subVectors(playerGroup.position, enemy.group.position);
       const dist = toPlayer.length();
       enemy.group.lookAt(playerGroup.position.x, 0, playerGroup.position.z);
 
-      if (dist > 15 && dist < 100) {
+      const enemyMoving = dist > 15 && dist < 100;
+      setCharacterAnim(enemy.charObj, enemyMoving);
+      if (enemyMoving) {
         toPlayer.normalize();
         enemy.group.position.addScaledVector(toPlayer, 4.5 * dt);
-        enemy.anim += dt * 10;
-        enemy.lLeg.rotation.x = Math.sin(enemy.anim) * 0.6;
-        enemy.rLeg.rotation.x = -Math.sin(enemy.anim) * 0.6;
       }
 
       enemy.shootTimer -= dt;
