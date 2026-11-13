@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Indian Battle Royale Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Portrait Warning -->
+  <div id="rotate-msg">
+    <h2>📱 फोन को आड़ा (Landscape) घुमाएं</h2>
+    <p>Indian Battle Royale Game खेलने के लिए स्क्रीन को रोटेट करें</p>
+  </div>
+
+  <!-- LOBBY SCREEN -->
+  <div id="lobby">
+    <div class="lobby-top">
+      <div class="logo-title">🇮🇳 INDIAN BATTLE ROYALE GAME</div>
+      <div class="lobby-badges">
+        <span class="badge" id="booyah-badge">BOOYAH: 0</span>
+        <span class="badge" id="total-kills-badge">KILLS: 0</span>
+        <button class="icon-btn" onclick="openSettings()">⚙️ SETTINGS</button>
+      </div>
+    </div>
+
+    <div class="lobby-middle">
+      <div class="char-card">
+        <div class="rank-tag">HEROIC • INDIA SERVER 🇮🇳</div>
+        <h2>COMMANDO ARJUN (HD)</h2>
+        <p>• <b>Drag Headshot:</b> फायर बटन दबाकर ऊपर खींचें<br>
+           • <b>Weapons:</b> AK-47 (2X) + AWM Sniper (4X)<br>
+           • <b>Survival:</b> Medkit, Gloo Wall और Loot Boxes</p>
+      </div>
+      <button class="play-btn" onclick="startMatch()">START MATCH</button>
+    </div>
+
+    <div class="lobby-bottom">
+      <span>Mode: Classic Battle Royale (Solo)</span>
+      <span>Graphics: HD 3D Engine</span>
+    </div>
+  </div>
+
+  <!-- IN-GAME HUD -->
+  <div id="hud">
+    <div class="hud-top">
+      <!-- Mini-Map Radar -->
+      <div class="minimap-box">
+        <canvas id="minimap" width="110" height="110"></canvas>
+      </div>
+
+      <!-- Match Stats -->
+      <div class="top-center-stats">
+        <div class="stat-pill" id="alive-box">ALIVE: 13 | KILLS: 0</div>
+        <div class="stat-pill zone-pill" id="zone-box">ZONE: 130m</div>
+      </div>
+
+      <!-- Top Right Controls -->
+      <div class="top-right-btns">
+        <button class="hud-mini-btn" onclick="openSettings()">⚙️</button>
+        <button class="hud-mini-btn exit-btn" onclick="exitToLobby()">EXIT</button>
+      </div>
+    </div>
+
+    <!-- Center Aim & Popups -->
+    <div id="crosshair"></div>
+    <div id="dmg-popup">-155</div>
+
+    <!-- Healing Progress Bar -->
+    <div id="heal-wrap">
+      <div class="heal-label">💊 USING MEDKIT...</div>
+      <div class="heal-bg"><div id="heal-fill"></div></div>
+    </div>
+
+    <!-- Loot Pickup Button -->
+    <button id="loot-btn" onclick="collectNearbyLoot()">📦 PICK UP LOOT</button>
+
+    <!-- Bottom Center: Medkit, HP Bar & Gun Switch -->
+    <div class="bottom-hud">
+      <button id="medkit-btn" onclick="useMedkit()">💊 MEDKIT (3)</button>
+
+      <div class="hp-container">
+        <div id="hp-text">HP: 200 / 200</div>
+        <div class="hp-bg"><div id="hp-fill"></div></div>
+      </div>
+
+      <button id="weapon-btn" onclick="switchWeapon()">🔫 AK-47 [30]</button>
+    </div>
+
+    <!-- Touch Zones & Action Buttons -->
+    <div id="look-zone"></div>
+    <div id="joy-zone"><div id="joy-stick"></div></div>
+
+    <div class="act-btn" id="reload-btn">RELOAD</div>
+    <div class="act-btn" id="gloo-btn">GLOO (5)</div>
+    <div class="act-btn" id="crouch-btn">SIT</div>
+    <div class="act-btn" id="scope-btn">2X</div>
+    <div class="act-btn" id="jump-btn">JUMP</div>
+    <div class="act-btn" id="fire-btn">FIRE</div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal">
+    <div class="modal-card">
+      <h3>⚙️ GAME SETTINGS</h3>
+
+      <div class="setting-row">
+        <label>General Sensitivity: <span id="sens-gen-val">50</span></label>
+        <input type="range" id="sens-general" min="15" max="100" value="50" oninput="updateSettingsUI()">
+      </div>
+
+      <div class="setting-row">
+        <label>Scope / Drag Sensitivity: <span id="sens-scp-val">45</span></label>
+        <input type="range" id="sens-scope" min="15" max="100" value="45" oninput="updateSettingsUI()">
+      </div>
+
+      <div class="setting-row">
+        <label>Graphics Quality:</label>
+        <select id="gfx-quality" onchange="applyGraphicsQuality()">
+          <option value="low">SMOOTH (Low)</option>
+          <option value="medium">STANDARD (Medium)</option>
+          <option value="high" selected>ULTRA HD (High)</option>
+        </select>
+      </div>
+
+      <button class="save-set-btn" onclick="closeSettings()">SAVE & CLOSE</button>
+    </div>
+  </div>
+
+  <!-- END SCREEN -->
+  <div id="end-screen">
+    <div id="end-title">BOOYAH! 🇮🇳</div>
+    <p id="end-stats">Kills: 0 | Headshots: 0</p>
+    <button class="play-btn" onclick="exitToLobby()">BACK TO LOBBY</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
